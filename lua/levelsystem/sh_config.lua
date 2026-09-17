@@ -50,7 +50,7 @@ Config.skills = {
 
 -- Cost in DarkRP money to reset all spent skill points back to unspent
 -- points. Set to 0 to make resets free.
-Config.resetSkillsCost = 5000
+Config.resetSkillsCost = 10000
 
 --------------------------------------------------------------------------------
 -- Job level requirements

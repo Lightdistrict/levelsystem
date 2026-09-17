@@ -9,6 +9,7 @@ surface.CreateFont("levelsystem.header", { font = "Roboto", size = 28, weight = 
 surface.CreateFont("levelsystem.cardname", { font = "Roboto", size = 18, weight = 600 })
 surface.CreateFont("levelsystem.cardcount", { font = "Roboto", size = 15, weight = 400 })
 surface.CreateFont("levelsystem.button", { font = "Roboto", size = 16, weight = 600 })
+surface.CreateFont("levelsystem.xpbar", { font = "Roboto", size = 13, weight = 600 })
 
 local COLOR_BG = Color(24, 26, 32)
 local COLOR_CARD = Color(35, 38, 46)
@@ -17,13 +18,17 @@ local COLOR_CARD_MAXED = Color(45, 60, 45)
 local COLOR_TEXT = Color(235, 235, 235)
 local COLOR_SUBTEXT = Color(160, 160, 165)
 local COLOR_ACCENT = Color(80, 200, 255)
+local COLOR_XPBAR_BG = Color(15, 16, 20)
 
 local function playClick()
 	surface.PlaySound("buttons/button15.wav")
 end
 
 --[[
-- Builds one skill card panel.
+- Builds one skill card panel. Sized/positioned externally via the parent
+- row's PerformLayout -- NOT via Dock/SetWide here, since the row hasn't
+- been laid out by its own parent yet at creation time (GetWide() on a
+- freshly created panel is unreliable until a real layout pass happens).
 -
 - @param panel parent
 - @param string key
@@ -34,7 +39,6 @@ end
 local function buildSkillCard(parent, key, def)
 	local card = vgui.Create("DButton", parent)
 	card:SetText("")
-	card:SetSize(1, 74)
 
 	local icon = vgui.Create("DImage", card)
 	icon:SetImage(def.icon or "icon16/star.png")
@@ -75,6 +79,7 @@ function LevelSystem.BuildSkillsTab(container)
 		surface.DrawRect(0, 0, w, h)
 	end
 
+	-- "You have X points to spend"
 	local header = vgui.Create("DPanel", container)
 	header:SetTall(60)
 	header.Paint = function(self, w, h)
@@ -84,8 +89,9 @@ function LevelSystem.BuildSkillsTab(container)
 	end
 	container:AddItem(header)
 
+	-- Level / Prestige line
 	local status = vgui.Create("DPanel", container)
-	status:SetTall(30)
+	status:SetTall(26)
 	status.Paint = function(self, w, h)
 		local d = LevelSystem.MyData
 		local text = "Level " .. d.level .. " / " .. Config.maxLevel
@@ -96,7 +102,32 @@ function LevelSystem.BuildSkillsTab(container)
 	end
 	container:AddItem(status)
 
-	-- Skill cards, 3 per row
+	-- XP progress bar: thin blue fill, current/needed text centered over it
+	local xpbar = vgui.Create("DPanel", container)
+	xpbar:SetTall(22)
+	xpbar.Paint = function(self, w, h)
+		local d = LevelSystem.MyData
+
+		draw.RoundedBox(4, 0, 0, w, h, COLOR_XPBAR_BG)
+
+		if d.level >= Config.maxLevel then
+			draw.RoundedBox(4, 0, 0, w, h, COLOR_ACCENT)
+			draw.SimpleText("MAX LEVEL", "levelsystem.xpbar", w / 2, h / 2, Color(20, 20, 20), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			return
+		end
+
+		local frac = d.xpNeeded > 0 and math.Clamp(d.xp / d.xpNeeded, 0, 1) or 0
+		if frac > 0 then
+			draw.RoundedBox(4, 0, 0, w * frac, h, COLOR_ACCENT)
+		end
+
+		local text = string.Comma(d.xp) .. " / " .. string.Comma(d.xpNeeded) .. " XP"
+		draw.SimpleText(text, "levelsystem.xpbar", w / 2, h / 2, COLOR_TEXT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	end
+	container:AddItem(xpbar)
+
+	-- Skill cards, 3 per row -- sized via the row's own PerformLayout so
+	-- they always match the row's actual current width.
 	local keys = {}
 	for key in pairs(Config.skills) do
 		table.insert(keys, key)
@@ -108,31 +139,37 @@ function LevelSystem.BuildSkillsTab(container)
 		row:SetTall(74)
 		row.Paint = function() end
 
+		local cards = {}
 		for col = 0, 2 do
 			local key = keys[i + col]
 			if key then
-				local card = buildSkillCard(row, key, Config.skills[key])
-				card:SetWide(row:GetWide() / 3 - 6)
-				card:Dock(LEFT)
-				card:DockMargin(col == 0 and 0 or 4, 0, 4, 0)
+				table.insert(cards, buildSkillCard(row, key, Config.skills[key]))
+			end
+		end
+
+		row.PerformLayout = function(self, w, h)
+			local gap = 8
+			local cardWidth = (w - gap * (#cards - 1)) / #cards
+			for idx, card in ipairs(cards) do
+				card:SetPos((idx - 1) * (cardWidth + gap), 0)
+				card:SetSize(cardWidth, h)
 			end
 		end
 
 		container:AddItem(row)
 	end
 
-	-- Footer: reset + prestige
+	-- Footer: reset + prestige, positioned via PerformLayout for the same
+	-- reason as the skill card rows above.
 	local footer = vgui.Create("DPanel", container)
 	footer:SetTall(48)
 	footer.Paint = function() end
 
 	local resetButton = vgui.Create("DButton", footer)
 	resetButton:SetText("")
-	resetButton:Dock(LEFT)
-	resetButton:SetWide(footer:GetWide() / 2 - 4)
 	resetButton.Paint = function(self, w, h)
 		draw.RoundedBox(6, 0, 0, w, h, COLOR_ACCENT)
-		local label = Config.resetSkillsCost > 0 and ("Reset All ($" .. Config.resetSkillsCost .. ")") or "Reset All"
+		local label = Config.resetSkillsCost > 0 and ("Reset skills for $" .. string.Comma(Config.resetSkillsCost)) or "Reset skills"
 		draw.SimpleText(label, "levelsystem.button", w / 2, h / 2, Color(20, 20, 20), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
 	resetButton.DoClick = function()
@@ -142,8 +179,6 @@ function LevelSystem.BuildSkillsTab(container)
 
 	local prestigeButton = vgui.Create("DButton", footer)
 	prestigeButton:SetText("")
-	prestigeButton:Dock(RIGHT)
-	prestigeButton:SetWide(footer:GetWide() / 2 - 4)
 	prestigeButton.Paint = function(self, w, h)
 		local d = LevelSystem.MyData
 		local canPrestige = d.level >= Config.maxLevel and d.prestige < Config.maxPrestige
@@ -167,6 +202,15 @@ function LevelSystem.BuildSkillsTab(container)
 
 		playClick()
 		LevelSystem.RequestPrestige()
+	end
+
+	footer.PerformLayout = function(self, w, h)
+		local gap = 8
+		local half = (w - gap) / 2
+		resetButton:SetPos(0, 0)
+		resetButton:SetSize(half, h)
+		prestigeButton:SetPos(half + gap, 0)
+		prestigeButton:SetSize(half, h)
 	end
 
 	container:AddItem(footer)
