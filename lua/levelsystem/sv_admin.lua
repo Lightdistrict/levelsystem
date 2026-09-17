@@ -61,6 +61,14 @@ end
 -- order between "levelsystem" and "sam" isn't guaranteed, so `sam` may not
 -- exist yet while this file is being included. By the start of the next
 -- tick every addon's initial files have finished loading either way.
+--
+-- Real SAM command-builder API (verified against actual published SAM
+-- modules, not guessed): the "player" arg type resolves to a `targets`
+-- TABLE (even with single_target = true, it's a 1-length table), the
+-- execute callback is :OnExecute(function(ply, targets, ...)), the chain
+-- ends with :End() (not :Register()), and player feedback goes through
+-- ply:sam_send_message("{A} did X to {T}", {A = ply, T = targets, ...})
+-- rather than a return value.
 timer.Simple(0, function()
 	if not sam then
 		print("[LevelSystem] SAM not detected -- skipping SAM chat commands (console fallback commands still work).")
@@ -69,47 +77,59 @@ timer.Simple(0, function()
 
 	sam.command.new("setlevel")
 		:SetPermission("levelsystem_setlevel", "moderator")
-		:AddArg("player")
+		:AddArg("player", { single_target = true })
 		:AddArg("number", { hint = "level", min = 1, max = Config.maxLevel, default = 1 })
 		:Help("Sets a player's level.")
-		:OnRun(function(caller, cmdArg, target, level)
+		:OnExecute(function(ply, targets, level)
+			local target = targets[1]
+			if not IsValid(target) then return end
+
 			LevelSystem.AdminSetLevel(target, level)
-			return "Set " .. target:Nick() .. "'s level to " .. math.Clamp(math.floor(level), 1, Config.maxLevel) .. "."
+			ply:sam_send_message("{A} set {T}'s level to " .. math.Clamp(math.floor(level), 1, Config.maxLevel) .. ".", { A = ply, T = targets })
 		end)
-		:Register()
+		:End()
 
 	sam.command.new("givexp")
 		:SetPermission("levelsystem_givexp", "moderator")
-		:AddArg("player")
+		:AddArg("player", { single_target = true })
 		:AddArg("number", { hint = "amount", min = 1, default = 100 })
 		:Help("Gives a player XP.")
-		:OnRun(function(caller, cmdArg, target, amount)
+		:OnExecute(function(ply, targets, amount)
+			local target = targets[1]
+			if not IsValid(target) then return end
+
 			LevelSystem.AdminGiveXP(target, amount)
-			return "Gave " .. target:Nick() .. " " .. math.floor(amount) .. " XP."
+			ply:sam_send_message("{A} gave {T} " .. math.floor(amount) .. " XP.", { A = ply, T = targets })
 		end)
-		:Register()
+		:End()
 
 	sam.command.new("takexp")
 		:SetPermission("levelsystem_takexp", "moderator")
-		:AddArg("player")
+		:AddArg("player", { single_target = true })
 		:AddArg("number", { hint = "amount", min = 1, default = 100 })
 		:Help("Takes XP away from a player.")
-		:OnRun(function(caller, cmdArg, target, amount)
+		:OnExecute(function(ply, targets, amount)
+			local target = targets[1]
+			if not IsValid(target) then return end
+
 			LevelSystem.AdminTakeXP(target, amount)
-			return "Took " .. math.floor(amount) .. " XP from " .. target:Nick() .. "."
+			ply:sam_send_message("{A} took " .. math.floor(amount) .. " XP from {T}.", { A = ply, T = targets })
 		end)
-		:Register()
+		:End()
 
 	sam.command.new("setprestige")
 		:SetPermission("levelsystem_setprestige", "moderator")
-		:AddArg("player")
+		:AddArg("player", { single_target = true })
 		:AddArg("number", { hint = "prestige", min = 0, max = Config.maxPrestige, default = 0 })
 		:Help("Sets a player's prestige rank.")
-		:OnRun(function(caller, cmdArg, target, prestige)
+		:OnExecute(function(ply, targets, prestige)
+			local target = targets[1]
+			if not IsValid(target) then return end
+
 			LevelSystem.AdminSetPrestige(target, prestige)
-			return "Set " .. target:Nick() .. "'s prestige to " .. math.Clamp(math.floor(prestige), 0, Config.maxPrestige) .. "."
+			ply:sam_send_message("{A} set {T}'s prestige to " .. math.Clamp(math.floor(prestige), 0, Config.maxPrestige) .. ".", { A = ply, T = targets })
 		end)
-		:Register()
+		:End()
 
 	print("[LevelSystem] Registered SAM commands: setlevel, givexp, takexp, setprestige.")
 end)
