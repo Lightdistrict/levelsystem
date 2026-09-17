@@ -23,7 +23,7 @@ Everything tunable lives in `lua/levelsystem/sh_config.lua`:
 - `xpRewards` — XP per player kill, NPC kill, and the passive tick amount/interval
 - `skillPointsPerLevel`
 - `resetSkillsOnPrestige` — wipe skill points on prestige or keep them
-- `skills` — the 7 stat categories: display name, icon, max points, and per-point effect value
+- `skills` — the 7 stat categories: display name, max points, and per-point effect value
 - `resetSkillsCost` — DarkRP money cost to respec all skill points (0 = free)
 - `jobRequirements` — keyed by job name (not team index), e.g.:
   ```lua
