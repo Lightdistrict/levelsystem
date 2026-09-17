@@ -57,7 +57,16 @@ local function reply(ply, message)
 	end
 end
 
-if sam then
+-- Deferred to the next tick, not run inline at file-load time: addon load
+-- order between "levelsystem" and "sam" isn't guaranteed, so `sam` may not
+-- exist yet while this file is being included. By the start of the next
+-- tick every addon's initial files have finished loading either way.
+timer.Simple(0, function()
+	if not sam then
+		print("[LevelSystem] SAM not detected -- skipping SAM chat commands (console fallback commands still work).")
+		return
+	end
+
 	sam.command.new("setlevel")
 		:SetPermission("levelsystem_setlevel", "moderator")
 		:AddArg("player")
@@ -101,7 +110,9 @@ if sam then
 			return "Set " .. target:Nick() .. "'s prestige to " .. math.Clamp(math.floor(prestige), 0, Config.maxPrestige) .. "."
 		end)
 		:Register()
-end
+
+	print("[LevelSystem] Registered SAM commands: setlevel, givexp, takexp, setprestige.")
+end)
 
 --------------------------------------------------------------------------------
 -- Console/chat-console fallback -- works even without SAM installed. Only
