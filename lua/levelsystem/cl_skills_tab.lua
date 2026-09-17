@@ -8,11 +8,16 @@ local Config = LevelSystem.Config
 -- Matches the F4 menu's own font family/sizing convention (see cl_parallax.lua's
 -- "dev title"/"dev button"/"dev text" -- "Roboto Regular"/"Roboto Medium" with
 -- ScreenScale sizes) so this tab looks cohesive with the rest of the menu.
-surface.CreateFont("levelsystem.header", { font = "Roboto Regular", size = ScreenScale(20) })
-surface.CreateFont("levelsystem.cardname", { font = "Roboto Medium", size = ScreenScale(7) })
-surface.CreateFont("levelsystem.cardcount", { font = "Roboto Regular", size = ScreenScale(6) })
-surface.CreateFont("levelsystem.button", { font = "Roboto Medium", size = ScreenScale(6.5) })
-surface.CreateFont("levelsystem.xpbar", { font = "Roboto Medium", size = ScreenScale(5.5) })
+-- antialias = true matters here -- without it, Roboto at these pixel sizes
+-- renders with visibly uneven letter spacing (a real GMod font hinting
+-- quirk, not a one-off rendering glitch).
+surface.CreateFont("levelsystem.header", { font = "Roboto Regular", size = ScreenScale(9), antialias = true })
+surface.CreateFont("levelsystem.cardname", { font = "Roboto Medium", size = ScreenScale(7), antialias = true })
+surface.CreateFont("levelsystem.carddesc", { font = "Roboto Regular", size = ScreenScale(6), antialias = true })
+surface.CreateFont("levelsystem.cardcount", { font = "Roboto Regular", size = ScreenScale(6), antialias = true })
+surface.CreateFont("levelsystem.button", { font = "Roboto Medium", size = ScreenScale(6.5), antialias = true })
+surface.CreateFont("levelsystem.xpbar", { font = "Roboto Medium", size = ScreenScale(5.5), antialias = true })
+surface.CreateFont("levelsystem.dollaricon", { font = "Roboto Medium", size = 26, antialias = true })
 
 local COLOR_BG = Color(24, 26, 32)
 local COLOR_CARD = Color(35, 38, 46)
@@ -45,62 +50,74 @@ local function drawArrowUp(x, y, size, col)
 	})
 end
 
-local function drawArrowDown(x, y, size, col)
-	surface.SetDrawColor(col)
-	draw.NoTexture()
-	surface.DrawPoly({
-		{ x = x + size * 0.35, y = y },
-		{ x = x + size * 0.65, y = y },
-		{ x = x + size * 0.65, y = y + size * 0.4 },
-		{ x = x + size, y = y + size * 0.4 },
-		{ x = x + size * 0.5, y = y + size },
-		{ x = x, y = y + size * 0.4 },
-		{ x = x + size * 0.35, y = y + size * 0.4 },
-	})
-end
-
-local function drawHeart(x, y, size, col)
-	surface.SetDrawColor(col)
-	draw.NoTexture()
-	local cx = x + size / 2
-	surface.DrawPoly({
-		{ x = cx, y = y + size },
-		{ x = x, y = y + size * 0.45 },
-		{ x = x, y = y + size * 0.15 },
-		{ x = x + size * 0.25, y = y },
-		{ x = cx, y = y + size * 0.28 },
-		{ x = x + size * 0.75, y = y },
-		{ x = x + size, y = y + size * 0.15 },
-		{ x = x + size, y = y + size * 0.45 },
-	})
-end
-
+-- Classic pointed shield: flat-ish curved top, tapering to a point at the bottom.
 local function drawShield(x, y, size, col)
 	surface.SetDrawColor(col)
 	draw.NoTexture()
 	surface.DrawPoly({
 		{ x = x + size * 0.5, y = y },
-		{ x = x + size, y = y + size * 0.22 },
-		{ x = x + size, y = y + size * 0.5 },
+		{ x = x + size * 0.92, y = y + size * 0.12 },
+		{ x = x + size * 0.92, y = y + size * 0.42 },
 		{ x = x + size * 0.5, y = y + size },
-		{ x = x, y = y + size * 0.5 },
-		{ x = x, y = y + size * 0.22 },
+		{ x = x + size * 0.08, y = y + size * 0.42 },
+		{ x = x + size * 0.08, y = y + size * 0.12 },
 	})
 end
 
-local function drawChevrons(x, y, size, col)
+-- Medical cross: a "+" made of two overlapping bars.
+local function drawCross(x, y, size, col)
+	surface.SetDrawColor(col)
+	local barThickness = size * 0.32
+	surface.DrawRect(x + (size - barThickness) / 2, y + size * 0.08, barThickness, size * 0.84)
+	surface.DrawRect(x + size * 0.08, y + (size - barThickness) / 2, size * 0.84, barThickness)
+end
+
+-- Ellipse approximated as an n-gon, optionally rotated -- used for the
+-- footprint icon.
+local function ellipsePoints(cx, cy, rx, ry, rotationDeg, segments)
+	local points = {}
+	local rot = math.rad(rotationDeg)
+	for i = 0, segments - 1 do
+		local a = (i / segments) * math.pi * 2
+		local px, py = math.cos(a) * rx, math.sin(a) * ry
+		local rxp = px * math.cos(rot) - py * math.sin(rot)
+		local ryp = px * math.sin(rot) + py * math.cos(rot)
+		table.insert(points, { x = cx + rxp, y = cy + ryp })
+	end
+	return points
+end
+
+-- Two footprints mid-stride, suggesting running.
+local function drawFootprints(x, y, size, col)
 	surface.SetDrawColor(col)
 	draw.NoTexture()
-	for _, offset in ipairs({ 0, size * 0.4 }) do
-		surface.DrawPoly({
-			{ x = x + offset, y = y },
-			{ x = x + offset + size * 0.35, y = y + size * 0.5 },
-			{ x = x + offset, y = y + size },
-			{ x = x + offset - size * 0.15, y = y + size * 0.85 },
-			{ x = x + offset + size * 0.12, y = y + size * 0.5 },
-			{ x = x + offset - size * 0.15, y = y + size * 0.15 },
-		})
-	end
+
+	-- Back foot (lower-left)
+	surface.DrawPoly(ellipsePoints(x + size * 0.32, y + size * 0.68, size * 0.16, size * 0.30, -20, 14))
+	-- Front foot (upper-right), slightly smaller/further along
+	surface.DrawPoly(ellipsePoints(x + size * 0.68, y + size * 0.32, size * 0.15, size * 0.28, 20, 14))
+end
+
+-- Boot in side profile (toe pointing right) with a ground line and small
+-- impact marks beneath it, like it's just landed.
+local function drawBoot(x, y, size, col)
+	surface.SetDrawColor(col)
+	draw.NoTexture()
+	surface.DrawPoly({
+		{ x = x + size * 0.18, y = y + size * 0.10 }, -- top of ankle
+		{ x = x + size * 0.46, y = y + size * 0.10 },
+		{ x = x + size * 0.46, y = y + size * 0.46 }, -- ankle meets foot
+		{ x = x + size * 0.82, y = y + size * 0.46 }, -- top of foot to toe
+		{ x = x + size * 0.94, y = y + size * 0.58 }, -- toe cap
+		{ x = x + size * 0.82, y = y + size * 0.68 }, -- underside of toe
+		{ x = x + size * 0.18, y = y + size * 0.68 }, -- sole to heel
+	})
+
+	-- Ground line + impact marks
+	surface.SetDrawColor(col)
+	surface.DrawRect(x + size * 0.05, y + size * 0.82, size * 0.9, size * 0.05)
+	surface.DrawRect(x, y + size * 0.90, size * 0.22, size * 0.05)
+	surface.DrawRect(x + size * 0.78, y + size * 0.90, size * 0.22, size * 0.05)
 end
 
 local function drawStar(x, y, size, col)
@@ -118,15 +135,15 @@ local function drawStar(x, y, size, col)
 end
 
 local function drawDollar(x, y, size, col)
-	draw.SimpleText("$", "levelsystem.cardname", x + size / 2, y + size / 2, col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	draw.SimpleText("$", "levelsystem.dollaricon", x + size / 2, y + size / 2, col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end
 
 local SHAPES = {
 	arrow_up = drawArrowUp,
-	arrow_down = drawArrowDown,
-	heart = drawHeart,
+	boot = drawBoot,
+	cross = drawCross,
 	shield = drawShield,
-	chevrons = drawChevrons,
+	footprints = drawFootprints,
 	star = drawStar,
 	dollar = drawDollar,
 }
@@ -141,22 +158,16 @@ end
 --------------------------------------------------------------------------------
 
 --[[
-- Formats a skill's per-point effect for its hover tooltip, e.g.
-- "+2% -- increases your jump height (0/20)".
+- Formats a skill's per-point amount for its `desc` format string, e.g.
+- "2%", "$3", "5".
 ]]
-local function skillTooltip(key, def)
-	local current = LevelSystem.MyData.skills[key] or 0
-	local amountText
-
+local function formatAmount(def)
 	if def.unit == "percent" then
-		amountText = "+" .. (def.perPoint * 100) .. "%"
+		return (def.perPoint * 100) .. "%"
 	elseif def.unit == "money" then
-		amountText = "+$" .. def.perPoint
-	else
-		amountText = "+" .. def.perPoint
+		return "$" .. def.perPoint
 	end
-
-	return amountText .. " per point -- " .. (def.desc or "") .. "\n(" .. current .. "/" .. def.max .. " spent)"
+	return tostring(def.perPoint)
 end
 
 --[[
@@ -174,7 +185,8 @@ end
 local function buildSkillCard(parent, key, def)
 	local card = vgui.Create("DButton", parent)
 	card:SetText("")
-	card:SetTooltip(skillTooltip(key, def))
+
+	local description = string.format(def.desc or "", formatAmount(def))
 
 	card.Paint = function(self, w, h)
 		local current = LevelSystem.MyData.skills[key] or 0
@@ -184,11 +196,14 @@ local function buildSkillCard(parent, key, def)
 
 		drawSkillIcon(def.shape, 16, h / 2 - 16, 32, COLOR_WHITE)
 
-		draw.SimpleText(def.name, "levelsystem.cardname", 60, h * 0.38, COLOR_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-		draw.SimpleText(current .. "/" .. def.max, "levelsystem.cardcount", 60, h * 0.72, COLOR_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-		-- Keep the tooltip's spent-count in sync as points get spent
-		self:SetTooltip(skillTooltip(key, def))
+		if self:IsHovered() then
+			-- Swap the normal name/count text for a description of what
+			-- spending a point here actually does.
+			draw.SimpleText(description, "levelsystem.carddesc", 60, h / 2, COLOR_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		else
+			draw.SimpleText(def.name, "levelsystem.cardname", 60, h * 0.38, COLOR_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+			draw.SimpleText(current .. "/" .. def.max, "levelsystem.cardcount", 60, h * 0.72, COLOR_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+		end
 	end
 
 	card.DoClick = function()

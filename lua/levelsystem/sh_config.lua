@@ -40,16 +40,18 @@ Config.xpRewards = {
 
 -- `shape` picks one of the hand-drawn vector icons in cl_skills_tab.lua
 -- (crisp at any size, unlike the low-res stock icon16/*.png set).
--- `unit` controls how the per-point tooltip number is formatted:
--- "percent" shows e.g. "+2%", "money" shows "+$3", "flat" shows "+5".
+-- `unit` controls how the per-point amount is formatted in `desc`:
+-- "percent" shows e.g. "2%", "money" shows "$3", "flat" shows "5".
+-- `desc` is a format string with one %s for that formatted amount --
+-- shown in place of the card's normal text while it's hovered.
 Config.skills = {
-	jumpheight = { name = "Jump Height", shape = "arrow_up",   unit = "percent", max = 20, perPoint = 0.02, desc = "increases your jump height" },
-	health     = { name = "Health",      shape = "heart",      unit = "flat",    max = 20, perPoint = 5,    desc = "increases your max health" },
-	armor      = { name = "Armor",       shape = "shield",     unit = "flat",    max = 20, perPoint = 5,    desc = "increases your starting armor" },
-	salary     = { name = "Salary",      shape = "dollar",     unit = "money",   max = 20, perPoint = 3,    desc = "increases your salary per paycheck" },
-	runspeed   = { name = "Run Speed",   shape = "chevrons",   unit = "flat",    max = 20, perPoint = 5,    desc = "increases your run and walk speed" },
-	falldamage = { name = "Fall Damage", shape = "arrow_down", unit = "percent", max = 20, perPoint = 0.03, desc = "reduces fall damage taken" },
-	xp         = { name = "XP",          shape = "star",       unit = "percent", max = 20, perPoint = 0.02, desc = "increases all XP gained" },
+	jumpheight = { name = "Jump Height", shape = "arrow_up",   unit = "percent", max = 20, perPoint = 0.02, desc = "Increases your jump height by %s per point" },
+	health     = { name = "Health",      shape = "cross",      unit = "flat",    max = 20, perPoint = 5,    desc = "Increases your max health by %s per point" },
+	armor      = { name = "Armor",       shape = "shield",     unit = "flat",    max = 20, perPoint = 5,    desc = "Increases your spawn armor by %s per point" },
+	salary     = { name = "Salary",      shape = "dollar",     unit = "money",   max = 20, perPoint = 3,    desc = "Increases your salary by %s per paycheck" },
+	runspeed   = { name = "Run Speed",   shape = "footprints", unit = "flat",    max = 20, perPoint = 5,    desc = "Increases your run and walk speed by %s per point" },
+	falldamage = { name = "Fall Damage", shape = "boot",       unit = "percent", max = 20, perPoint = 0.03, desc = "Reduces fall damage taken by %s per point" },
+	xp         = { name = "XP",          shape = "star",       unit = "percent", max = 20, perPoint = 0.02, desc = "Increases all XP gained by %s per point" },
 }
 
 -- Cost in DarkRP money to reset all spent skill points back to unspent
