@@ -45,6 +45,19 @@ Everything tunable lives in `lua/levelsystem/sh_config.lua`:
 
 All effects are re-applied fresh on every spawn and immediately after spending/resetting points, so they never stack across respawns or desync.
 
+## Admin commands
+
+Registered through SAM (as `!setlevel`, `!givexp`, `!takexp`, `!setprestige`) if SAM is installed, each gated behind its own permission (defaults to the `moderator` group -- adjust in SAM's permissions UI). Concommands with the same names are always registered too, as a console/RCON fallback that works even without SAM:
+
+```
+levelsystem_setlevel <steamid|userid> <level>
+levelsystem_givexp <steamid|userid> <amount>
+levelsystem_takexp <steamid|userid> <amount>
+levelsystem_setprestige <steamid|userid> <prestige>
+```
+
+Console commands only run from the dedicated server console or a superadmin's client console. `givexp`/`takexp` don't apply the XP-skill bonus and `takexp` never delevels a player, it just floors their current XP at 0.
+
 ## Notes
 
 - The salary and fall-damage hooks were verified against DarkRP's actual gamemode source (not guessed) to make sure they hook the real, correct mechanism.
