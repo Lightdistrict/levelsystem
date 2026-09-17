@@ -50,13 +50,13 @@ All effects are re-applied fresh on every spawn and immediately after spending/r
 Registered through SAM (as `!setlevel`, `!givexp`, `!takexp`, `!setprestige`) if SAM is installed, each gated behind its own permission (defaults to the `moderator` group -- adjust in SAM's permissions UI). Concommands with the same names are always registered too, as a console/RCON fallback that works even without SAM:
 
 ```
-levelsystem_setlevel <steamid|userid> <level>
-levelsystem_givexp <steamid|userid> <amount>
-levelsystem_takexp <steamid|userid> <amount>
-levelsystem_setprestige <steamid|userid> <prestige>
+levelsystem_setlevel <name|steamid|userid> <level>
+levelsystem_givexp <name|steamid|userid> <amount>
+levelsystem_takexp <name|steamid|userid> <amount>
+levelsystem_setprestige <name|steamid|userid> <prestige>
 ```
 
-Console commands only run from the dedicated server console or a superadmin's client console. `givexp`/`takexp` don't apply the XP-skill bonus and `takexp` never delevels a player, it just floors their current XP at 0.
+Target can be a partial player name, SteamID64, SteamID, or userid. These only run from the dedicated server console or a superadmin's own console -- run them from your client console (`~` in-game), not the server's, and the confirmation prints to your own console/chat too. `givexp`/`takexp` don't apply the XP-skill bonus and `takexp` never delevels a player, it just floors their current XP at 0.
 
 ## Notes
 

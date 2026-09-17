@@ -5,8 +5,56 @@
 
 local Config = LevelSystem.Config
 
-local function levelName(ply)
-	return IsValid(ply) and ply:Nick() or "console"
+--[[
+- Finds a player by (in order) exact SteamID64, SteamID ("STEAM_0:..."),
+- userid, or a case-insensitive partial nick match.
+-
+- @param string str
+- @return player|nil
+]]
+local function resolveTarget(str)
+	if not str or str == "" then return nil end
+
+	if string.match(str, "^%d+$") and #str >= 15 then
+		local bySid64 = player.GetBySteamID64(str)
+		if IsValid(bySid64) then return bySid64 end
+	end
+
+	local bySteamId = player.GetBySteamID(str)
+	if IsValid(bySteamId) then return bySteamId end
+
+	local userid = tonumber(str)
+	if userid then
+		local byId = player.GetByID(userid)
+		if IsValid(byId) then return byId end
+	end
+
+	local needle = string.lower(str)
+	for _, candidate in ipairs(player.GetAll()) do
+		if string.find(string.lower(candidate:Nick()), needle, 1, true) then
+			return candidate
+		end
+	end
+
+	return nil
+end
+
+--[[
+- Replies to whoever ran the console command -- the dedicated server
+- console (ply invalid) via print(), or the calling client via their own
+- console/chat, since print() from a server-side concommand never reaches
+- a client's console.
+-
+- @param player|nil ply
+- @param string message
+]]
+local function reply(ply, message)
+	if IsValid(ply) then
+		ply:PrintMessage(HUD_PRINTCONSOLE, message)
+		ply:ChatPrint(message)
+	else
+		print(message)
+	end
 end
 
 if sam then
@@ -56,8 +104,9 @@ if sam then
 end
 
 --------------------------------------------------------------------------------
--- Console/RCON fallback -- works even without SAM installed. Only the
--- dedicated server console (ply == NULL) or a superadmin may run these.
+-- Console/chat-console fallback -- works even without SAM installed. Only
+-- the dedicated server console (ply == NULL) or a superadmin may run these.
+-- Target can be a SteamID64, SteamID, userid, or a partial player name.
 --------------------------------------------------------------------------------
 
 local function canUseConsoleCommand(ply)
@@ -67,55 +116,55 @@ end
 concommand.Add("levelsystem_setlevel", function(ply, cmd, args)
 	if not canUseConsoleCommand(ply) then return end
 
-	local target = player.GetBySteamID(args[1]) or player.GetByID(tonumber(args[1]) or -1)
+	local target = resolveTarget(args[1])
 	local level = tonumber(args[2])
 	if not IsValid(target) or not level then
-		print("Usage: levelsystem_setlevel <steamid|userid> <level>")
+		reply(ply, "Usage: levelsystem_setlevel <name|steamid|userid> <level>")
 		return
 	end
 
 	LevelSystem.AdminSetLevel(target, level)
-	print("Set " .. levelName(target) .. "'s level to " .. math.Clamp(math.floor(level), 1, Config.maxLevel) .. ".")
+	reply(ply, "Set " .. target:Nick() .. "'s level to " .. math.Clamp(math.floor(level), 1, Config.maxLevel) .. ".")
 end)
 
 concommand.Add("levelsystem_givexp", function(ply, cmd, args)
 	if not canUseConsoleCommand(ply) then return end
 
-	local target = player.GetBySteamID(args[1]) or player.GetByID(tonumber(args[1]) or -1)
+	local target = resolveTarget(args[1])
 	local amount = tonumber(args[2])
 	if not IsValid(target) or not amount then
-		print("Usage: levelsystem_givexp <steamid|userid> <amount>")
+		reply(ply, "Usage: levelsystem_givexp <name|steamid|userid> <amount>")
 		return
 	end
 
 	LevelSystem.AdminGiveXP(target, amount)
-	print("Gave " .. levelName(target) .. " " .. math.floor(amount) .. " XP.")
+	reply(ply, "Gave " .. target:Nick() .. " " .. math.floor(amount) .. " XP.")
 end)
 
 concommand.Add("levelsystem_takexp", function(ply, cmd, args)
 	if not canUseConsoleCommand(ply) then return end
 
-	local target = player.GetBySteamID(args[1]) or player.GetByID(tonumber(args[1]) or -1)
+	local target = resolveTarget(args[1])
 	local amount = tonumber(args[2])
 	if not IsValid(target) or not amount then
-		print("Usage: levelsystem_takexp <steamid|userid> <amount>")
+		reply(ply, "Usage: levelsystem_takexp <name|steamid|userid> <amount>")
 		return
 	end
 
 	LevelSystem.AdminTakeXP(target, amount)
-	print("Took " .. math.floor(amount) .. " XP from " .. levelName(target) .. ".")
+	reply(ply, "Took " .. math.floor(amount) .. " XP from " .. target:Nick() .. ".")
 end)
 
 concommand.Add("levelsystem_setprestige", function(ply, cmd, args)
 	if not canUseConsoleCommand(ply) then return end
 
-	local target = player.GetBySteamID(args[1]) or player.GetByID(tonumber(args[1]) or -1)
+	local target = resolveTarget(args[1])
 	local prestige = tonumber(args[2])
 	if not IsValid(target) or not prestige then
-		print("Usage: levelsystem_setprestige <steamid|userid> <prestige>")
+		reply(ply, "Usage: levelsystem_setprestige <name|steamid|userid> <prestige>")
 		return
 	end
 
 	LevelSystem.AdminSetPrestige(target, prestige)
-	print("Set " .. levelName(target) .. "'s prestige to " .. math.Clamp(math.floor(prestige), 0, Config.maxPrestige) .. ".")
+	reply(ply, "Set " .. target:Nick() .. "'s prestige to " .. math.Clamp(math.floor(prestige), 0, Config.maxPrestige) .. ".")
 end)
