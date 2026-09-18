@@ -77,7 +77,12 @@ function LevelSystem.TryPrestige(ply)
 end
 
 net.Receive("levelsystem_prestige", function(len, ply)
-	LevelSystem.TryPrestige(ply)
+	-- Was silently swallowing failures -- a click that didn't meet the
+	-- requirements looked exactly like a click that did nothing at all.
+	local success, reason = LevelSystem.TryPrestige(ply)
+	if not success and reason then
+		LevelSystem.Notify(ply, NOTIFY_ERROR, reason)
+	end
 end)
 
 --------------------------------------------------------------------------------

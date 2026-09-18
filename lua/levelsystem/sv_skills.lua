@@ -120,6 +120,40 @@ end)
 -- Fall damage reduction
 --------------------------------------------------------------------------------
 
+--------------------------------------------------------------------------------
+-- Admin setters -- used by sv_admin.lua's commands.
+--------------------------------------------------------------------------------
+
+--[[
+- @param player ply
+- @param number amount
+]]
+function LevelSystem.AdminGivePoints(ply, amount)
+	local data = LevelSystem.GetData(ply)
+	amount = math.floor(amount)
+	if amount <= 0 then return end
+
+	data.points = data.points + amount
+
+	LevelSystem.SyncToClient(ply)
+	LevelSystem.SaveData(ply)
+end
+
+--[[
+- @param player ply
+- @param number amount -- floors at 0 points
+]]
+function LevelSystem.AdminTakePoints(ply, amount)
+	local data = LevelSystem.GetData(ply)
+	amount = math.floor(amount)
+	if amount <= 0 then return end
+
+	data.points = math.max(0, data.points - amount)
+
+	LevelSystem.SyncToClient(ply)
+	LevelSystem.SaveData(ply)
+end
+
 hook.Add("GetFallDamage", "levelsystem_falldamage_reduction", function(ply, speed)
 	local data = LevelSystem.GetData(ply)
 	local points = data.skills.falldamage or 0

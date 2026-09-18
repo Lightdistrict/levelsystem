@@ -131,7 +131,35 @@ timer.Simple(0, function()
 		end)
 		:End()
 
-	print("[LevelSystem] Registered SAM commands: setlevel, givexp, takexp, setprestige.")
+	sam.command.new("givepoints")
+		:SetPermission("levelsystem_givepoints", "moderator")
+		:AddArg("player", { single_target = true })
+		:AddArg("number", { hint = "amount", min = 1, default = 1 })
+		:Help("Gives a player skill points.")
+		:OnExecute(function(ply, targets, amount)
+			local target = targets[1]
+			if not IsValid(target) then return end
+
+			LevelSystem.AdminGivePoints(target, amount)
+			ply:sam_send_message("{A} gave {T} " .. math.floor(amount) .. " skill point(s).", { A = ply, T = targets })
+		end)
+		:End()
+
+	sam.command.new("takepoints")
+		:SetPermission("levelsystem_takepoints", "moderator")
+		:AddArg("player", { single_target = true })
+		:AddArg("number", { hint = "amount", min = 1, default = 1 })
+		:Help("Takes skill points away from a player.")
+		:OnExecute(function(ply, targets, amount)
+			local target = targets[1]
+			if not IsValid(target) then return end
+
+			LevelSystem.AdminTakePoints(target, amount)
+			ply:sam_send_message("{A} took " .. math.floor(amount) .. " skill point(s) from {T}.", { A = ply, T = targets })
+		end)
+		:End()
+
+	print("[LevelSystem] Registered SAM commands: setlevel, givexp, takexp, setprestige, givepoints, takepoints.")
 end)
 
 --------------------------------------------------------------------------------
@@ -198,4 +226,32 @@ concommand.Add("levelsystem_setprestige", function(ply, cmd, args)
 
 	LevelSystem.AdminSetPrestige(target, prestige)
 	reply(ply, "Set " .. target:Nick() .. "'s prestige to " .. math.Clamp(math.floor(prestige), 0, Config.maxPrestige) .. ".")
+end)
+
+concommand.Add("levelsystem_givepoints", function(ply, cmd, args)
+	if not canUseConsoleCommand(ply) then return end
+
+	local target = resolveTarget(args[1])
+	local amount = tonumber(args[2])
+	if not IsValid(target) or not amount then
+		reply(ply, "Usage: levelsystem_givepoints <name|steamid|userid> <amount>")
+		return
+	end
+
+	LevelSystem.AdminGivePoints(target, amount)
+	reply(ply, "Gave " .. target:Nick() .. " " .. math.floor(amount) .. " skill point(s).")
+end)
+
+concommand.Add("levelsystem_takepoints", function(ply, cmd, args)
+	if not canUseConsoleCommand(ply) then return end
+
+	local target = resolveTarget(args[1])
+	local amount = tonumber(args[2])
+	if not IsValid(target) or not amount then
+		reply(ply, "Usage: levelsystem_takepoints <name|steamid|userid> <amount>")
+		return
+	end
+
+	LevelSystem.AdminTakePoints(target, amount)
+	reply(ply, "Took " .. math.floor(amount) .. " skill point(s) from " .. target:Nick() .. ".")
 end)
