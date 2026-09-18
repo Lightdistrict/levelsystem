@@ -44,6 +44,26 @@ end
 -- not a cohesion issue) rather than pulling from the theme.
 local COLOR_CARD_MAXED = Color(45, 60, 45)
 
+-- Deliberately more opaque than the F4 menu's own theme colors (its
+-- listing_background/listing_header are quite see-through) -- same black
+-- hue for cohesion, just darker, per an explicit follow-up request.
+local CARD_BG = Color(0, 0, 0, 150)
+local CARD_HOVER_BG = Color(0, 0, 0, 195)
+local PANEL_BG = Color(0, 0, 0, 150)
+local OUTLINE = Color(255, 255, 255, 25)
+
+--[[
+- Draws a rounded panel background with a faint 1px light outline: a
+- slightly larger light box first, then the real fill inset by 1px on
+- each side, leaving a thin rim visible around the edge -- so a card
+- reads as a distinct panel even against a busy background.
+]]
+local function drawPanelBg(w, h, fillColor, radius)
+	radius = radius or 6
+	draw.RoundedBox(radius, 0, 0, w, h, OUTLINE)
+	draw.RoundedBox(radius, 1, 1, w - 2, h - 2, fillColor)
+end
+
 local function playClick()
 	surface.PlaySound("buttons/button15.wav")
 end
@@ -86,7 +106,7 @@ local function buildSkillCard(parent, key, def)
 		local current = LevelSystem.MyData.skills[key] or 0
 		local maxed = current >= def.max
 
-		draw.RoundedBox(6, 0, 0, w, h, maxed and COLOR_CARD_MAXED or (self:IsHovered() and t.listing_header or t.listing_background))
+		drawPanelBg(w, h, maxed and COLOR_CARD_MAXED or (self:IsHovered() and CARD_HOVER_BG or CARD_BG))
 
 		if self:IsHovered() then
 			-- Swap the normal name/count text for a description of what
@@ -126,7 +146,7 @@ function LevelSystem.BuildSkillsTab(container)
 	header:SetTall(60)
 	header.Paint = function(self, w, h)
 		local t = theme()
-		draw.RoundedBox(6, 0, 0, w, h, t.listing_background)
+		drawPanelBg(w, h, PANEL_BG)
 		local text = "You have " .. LevelSystem.MyData.points .. " point" .. (LevelSystem.MyData.points == 1 and "" or "s") .. " to spend"
 		draw.SimpleText(text, "levelsystem.header", w / 2, h / 2, t.text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
@@ -154,7 +174,7 @@ function LevelSystem.BuildSkillsTab(container)
 		local accent = accentColor()
 		local d = LevelSystem.MyData
 
-		draw.RoundedBox(4, 0, 0, w, h, t.listing_background)
+		drawPanelBg(w, h, PANEL_BG, 4)
 
 		if d.level >= Config.maxLevel then
 			draw.RoundedBox(4, 0, 0, w, h, accent)
@@ -230,7 +250,11 @@ function LevelSystem.BuildSkillsTab(container)
 		local d = LevelSystem.MyData
 		local canPrestige = d.level >= Config.maxLevel and d.prestige < Config.maxPrestige
 
-		draw.RoundedBox(6, 0, 0, w, h, canPrestige and accentColor() or t.listing_background)
+		if canPrestige then
+			draw.RoundedBox(6, 0, 0, w, h, accentColor())
+		else
+			drawPanelBg(w, h, PANEL_BG)
+		end
 
 		local label
 		if d.prestige >= Config.maxPrestige then
