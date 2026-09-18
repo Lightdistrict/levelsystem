@@ -33,7 +33,7 @@ function LevelSystem.GrantXP(ply, amount, reason)
 	end
 
 	if leveledUp then
-		LevelSystem.Notify(ply, NOTIFY_GENERIC, "You reached level " .. data.level .. "! (+" .. Config.skillPointsPerLevel .. " skill point" .. (Config.skillPointsPerLevel == 1 and "" or "s") .. ")")
+		LevelSystem.Notify(ply, LevelSystem.NOTIFY_GENERIC, "You reached level " .. data.level .. "! (+" .. Config.skillPointsPerLevel .. " skill point" .. (Config.skillPointsPerLevel == 1 and "" or "s") .. ")")
 		LevelSystem.ApplySkillEffects(ply)
 	end
 
@@ -69,7 +69,7 @@ function LevelSystem.TryPrestige(ply)
 		LevelSystem.ApplySkillEffects(ply)
 	end
 
-	LevelSystem.Notify(ply, NOTIFY_GENERIC, "You prestiged! You are now Prestige " .. data.prestige .. ".")
+	LevelSystem.Notify(ply, LevelSystem.NOTIFY_GENERIC, "You prestiged! You are now Prestige " .. data.prestige .. ".")
 	LevelSystem.SyncToClient(ply)
 	LevelSystem.SaveData(ply)
 
@@ -81,7 +81,7 @@ net.Receive("levelsystem_prestige", function(len, ply)
 	-- requirements looked exactly like a click that did nothing at all.
 	local success, reason = LevelSystem.TryPrestige(ply)
 	if not success and reason then
-		LevelSystem.Notify(ply, NOTIFY_ERROR, reason)
+		LevelSystem.Notify(ply, LevelSystem.NOTIFY_ERROR, reason)
 	end
 end)
 
@@ -130,7 +130,7 @@ function LevelSystem.AdminGiveXP(ply, amount)
 	end
 
 	if leveledUp then
-		LevelSystem.Notify(ply, NOTIFY_GENERIC, "You reached level " .. data.level .. "! (+" .. Config.skillPointsPerLevel .. " skill point" .. (Config.skillPointsPerLevel == 1 and "" or "s") .. ")")
+		LevelSystem.Notify(ply, LevelSystem.NOTIFY_GENERIC, "You reached level " .. data.level .. "! (+" .. Config.skillPointsPerLevel .. " skill point" .. (Config.skillPointsPerLevel == 1 and "" or "s") .. ")")
 		LevelSystem.ApplySkillEffects(ply)
 	end
 

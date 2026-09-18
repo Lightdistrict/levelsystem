@@ -32,7 +32,7 @@ net.Receive("levelsystem_resetall", function(len, ply)
 
 	if Config.resetSkillsCost > 0 then
 		if not ply.getDarkRPVar or (ply:getDarkRPVar("money") or 0) < Config.resetSkillsCost then
-			LevelSystem.Notify(ply, NOTIFY_ERROR, "You need $" .. Config.resetSkillsCost .. " to reset your skills.")
+			LevelSystem.Notify(ply, LevelSystem.NOTIFY_ERROR, "You need $" .. Config.resetSkillsCost .. " to reset your skills.")
 			return
 		end
 		ply:addMoney(-Config.resetSkillsCost)
@@ -47,7 +47,7 @@ net.Receive("levelsystem_resetall", function(len, ply)
 	LevelSystem.SyncToClient(ply)
 	LevelSystem.SaveData(ply)
 
-	LevelSystem.Notify(ply, NOTIFY_GENERIC, "Skills reset -- you have " .. data.points .. " points to spend.")
+	LevelSystem.Notify(ply, LevelSystem.NOTIFY_GENERIC, "Skills reset -- you have " .. data.points .. " points to spend.")
 end)
 
 --------------------------------------------------------------------------------

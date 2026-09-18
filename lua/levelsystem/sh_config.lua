@@ -1,6 +1,22 @@
 local Config = LevelSystem.Config
 
 --------------------------------------------------------------------------------
+-- Notification types -- own copies of GMod's NOTIFY_ constants (0-4),
+-- defined explicitly rather than relying on the globals NOTIFY_GENERIC/
+-- NOTIFY_ERROR/etc existing server-side. They don't always (server-side
+-- Lua doesn't guarantee every client-oriented enum is registered), which
+-- is what was crashing LevelSystem.Notify with a nil passed to
+-- net.WriteUInt. These values match DarkRP's own notify()/AddNotify
+-- convention exactly, so the client-side display is unaffected.
+--------------------------------------------------------------------------------
+
+LevelSystem.NOTIFY_GENERIC = 0
+LevelSystem.NOTIFY_ERROR = 1
+LevelSystem.NOTIFY_UNDO = 2
+LevelSystem.NOTIFY_HINT = 3
+LevelSystem.NOTIFY_CLEANUP = 4
+
+--------------------------------------------------------------------------------
 -- Core progression
 --------------------------------------------------------------------------------
 
