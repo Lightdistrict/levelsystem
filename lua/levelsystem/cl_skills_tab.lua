@@ -47,9 +47,9 @@ local COLOR_CARD_MAXED = Color(45, 60, 45)
 -- Deliberately more opaque than the F4 menu's own theme colors (its
 -- listing_background/listing_header are quite see-through) -- same black
 -- hue for cohesion, just darker, per an explicit follow-up request.
-local CARD_BG = Color(0, 0, 0, 150)
-local CARD_HOVER_BG = Color(0, 0, 0, 195)
-local PANEL_BG = Color(0, 0, 0, 150)
+local CARD_BG = Color(0, 0, 0, 225)
+local CARD_HOVER_BG = Color(0, 0, 0, 245)
+local PANEL_BG = Color(0, 0, 0, 225)
 local OUTLINE = Color(255, 255, 255, 25)
 
 --[[
