@@ -18,13 +18,31 @@ surface.CreateFont("levelsystem.cardcount", { font = "Roboto Regular", size = Sc
 surface.CreateFont("levelsystem.button", { font = "Roboto Medium", size = ScreenScale(6.5), antialias = true })
 surface.CreateFont("levelsystem.xpbar", { font = "Roboto Medium", size = ScreenScale(5.5), antialias = true })
 
-local COLOR_BG = Color(24, 26, 32)
-local COLOR_CARD = Color(35, 38, 46)
-local COLOR_CARD_HOVER = Color(45, 49, 58)
+-- Reads the F4 menu's own active theme (its "max" theme: plain black,
+-- no blur, matching the scoreboard) so this tab is drawn with the exact
+-- same colors as the rest of the menu instead of its own separate palette.
+-- Falls back to those same "max" values if f4menu somehow isn't loaded.
+local function theme()
+	local general = F4menu and F4menu.configuration and F4menu.configuration.general
+	local t = general and general.themes and general.themes[general.theme]
+	if t then return t end
+
+	return {
+		list_background = Color(0, 0, 0, 60),
+		listing_background = Color(0, 0, 0, 50),
+		listing_header = Color(0, 0, 0, 150),
+		text = Color(235, 235, 235),
+	}
+end
+
+local function accentColor()
+	local general = F4menu and F4menu.configuration and F4menu.configuration.general
+	return (general and general.color) or Color(80, 200, 255)
+end
+
+-- Maxed-out cards keep a distinct green tint (a genuine status indicator,
+-- not a cohesion issue) rather than pulling from the theme.
 local COLOR_CARD_MAXED = Color(45, 60, 45)
-local COLOR_WHITE = Color(255, 255, 255)
-local COLOR_ACCENT = Color(80, 200, 255)
-local COLOR_XPBAR_BG = Color(15, 16, 20)
 
 local function playClick()
 	surface.PlaySound("buttons/button15.wav")
@@ -64,18 +82,19 @@ local function buildSkillCard(parent, key, def)
 	local description = string.format(def.desc or "", formatAmount(def))
 
 	card.Paint = function(self, w, h)
+		local t = theme()
 		local current = LevelSystem.MyData.skills[key] or 0
 		local maxed = current >= def.max
 
-		draw.RoundedBox(6, 0, 0, w, h, maxed and COLOR_CARD_MAXED or (self:IsHovered() and COLOR_CARD_HOVER or COLOR_CARD))
+		draw.RoundedBox(6, 0, 0, w, h, maxed and COLOR_CARD_MAXED or (self:IsHovered() and t.listing_header or t.listing_background))
 
 		if self:IsHovered() then
 			-- Swap the normal name/count text for a description of what
 			-- spending a point here actually does.
-			draw.SimpleText(description, "levelsystem.carddesc", 16, h / 2, COLOR_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+			draw.SimpleText(description, "levelsystem.carddesc", 16, h / 2, t.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 		else
-			draw.SimpleText(def.name, "levelsystem.cardname", 16, h * 0.38, COLOR_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-			draw.SimpleText(current .. "/" .. def.max, "levelsystem.cardcount", 16, h * 0.72, COLOR_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+			draw.SimpleText(def.name, "levelsystem.cardname", 16, h * 0.38, t.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+			draw.SimpleText(current .. "/" .. def.max, "levelsystem.cardcount", 16, h * 0.72, t.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 		end
 	end
 
@@ -95,18 +114,21 @@ end
 - @param panel container -- the DPanelList passed in by the F4 menu tab system
 ]]
 function LevelSystem.BuildSkillsTab(container)
-	container.Paint = function(self, w, h)
-		surface.SetDrawColor(COLOR_BG)
-		surface.DrawRect(0, 0, w, h)
-	end
+	-- No background fill here on purpose -- the F4 frame itself already
+	-- paints the theme's black background (and blur, if the active theme
+	-- enables it) behind every tab, exactly like the Jobs/Weapons tabs.
+	-- Painting our own solid color here is what made this tab look like a
+	-- separate box instead of blending into the rest of the menu.
+	container.Paint = function() end
 
 	-- "You have X points to spend"
 	local header = vgui.Create("DPanel", container)
 	header:SetTall(60)
 	header.Paint = function(self, w, h)
-		draw.RoundedBox(6, 0, 0, w, h, COLOR_CARD)
+		local t = theme()
+		draw.RoundedBox(6, 0, 0, w, h, t.listing_background)
 		local text = "You have " .. LevelSystem.MyData.points .. " point" .. (LevelSystem.MyData.points == 1 and "" or "s") .. " to spend"
-		draw.SimpleText(text, "levelsystem.header", w / 2, h / 2, COLOR_WHITE, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText(text, "levelsystem.header", w / 2, h / 2, t.text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
 	container:AddItem(header)
 
@@ -119,31 +141,34 @@ function LevelSystem.BuildSkillsTab(container)
 		if d.prestige > 0 then
 			text = "Prestige " .. d.prestige .. "   " .. text
 		end
-		draw.SimpleText(text, "levelsystem.cardcount", w / 2, h / 2, COLOR_ACCENT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText(text, "levelsystem.cardcount", w / 2, h / 2, accentColor(), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
 	container:AddItem(status)
 
-	-- XP progress bar: thin blue fill, current/needed text centered over it
+	-- XP progress bar: thin accent-colored fill, current/needed text
+	-- centered over it
 	local xpbar = vgui.Create("DPanel", container)
 	xpbar:SetTall(22)
 	xpbar.Paint = function(self, w, h)
+		local t = theme()
+		local accent = accentColor()
 		local d = LevelSystem.MyData
 
-		draw.RoundedBox(4, 0, 0, w, h, COLOR_XPBAR_BG)
+		draw.RoundedBox(4, 0, 0, w, h, t.listing_background)
 
 		if d.level >= Config.maxLevel then
-			draw.RoundedBox(4, 0, 0, w, h, COLOR_ACCENT)
+			draw.RoundedBox(4, 0, 0, w, h, accent)
 			draw.SimpleText("MAX LEVEL", "levelsystem.xpbar", w / 2, h / 2, Color(20, 20, 20), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 			return
 		end
 
 		local frac = d.xpNeeded > 0 and math.Clamp(d.xp / d.xpNeeded, 0, 1) or 0
 		if frac > 0 then
-			draw.RoundedBox(4, 0, 0, w * frac, h, COLOR_ACCENT)
+			draw.RoundedBox(4, 0, 0, w * frac, h, accent)
 		end
 
 		local text = string.Comma(d.xp) .. " / " .. string.Comma(d.xpNeeded) .. " XP"
-		draw.SimpleText(text, "levelsystem.xpbar", w / 2, h / 2, COLOR_WHITE, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText(text, "levelsystem.xpbar", w / 2, h / 2, t.text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
 	container:AddItem(xpbar)
 
@@ -189,7 +214,7 @@ function LevelSystem.BuildSkillsTab(container)
 	local resetButton = vgui.Create("DButton", footer)
 	resetButton:SetText("")
 	resetButton.Paint = function(self, w, h)
-		draw.RoundedBox(6, 0, 0, w, h, COLOR_ACCENT)
+		draw.RoundedBox(6, 0, 0, w, h, accentColor())
 		local label = Config.resetSkillsCost > 0 and ("Reset skills for $" .. string.Comma(Config.resetSkillsCost)) or "Reset skills"
 		draw.SimpleText(label, "levelsystem.button", w / 2, h / 2, Color(20, 20, 20), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
@@ -201,10 +226,11 @@ function LevelSystem.BuildSkillsTab(container)
 	local prestigeButton = vgui.Create("DButton", footer)
 	prestigeButton:SetText("")
 	prestigeButton.Paint = function(self, w, h)
+		local t = theme()
 		local d = LevelSystem.MyData
 		local canPrestige = d.level >= Config.maxLevel and d.prestige < Config.maxPrestige
 
-		draw.RoundedBox(6, 0, 0, w, h, canPrestige and COLOR_ACCENT or COLOR_CARD)
+		draw.RoundedBox(6, 0, 0, w, h, canPrestige and accentColor() or t.listing_background)
 
 		local label
 		if d.prestige >= Config.maxPrestige then
@@ -215,7 +241,7 @@ function LevelSystem.BuildSkillsTab(container)
 			label = "Prestige (Lvl " .. Config.maxLevel .. " required)"
 		end
 
-		draw.SimpleText(label, "levelsystem.button", w / 2, h / 2, canPrestige and Color(20, 20, 20) or COLOR_WHITE, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText(label, "levelsystem.button", w / 2, h / 2, canPrestige and Color(20, 20, 20) or t.text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
 	prestigeButton.DoClick = function()
 		local d = LevelSystem.MyData
