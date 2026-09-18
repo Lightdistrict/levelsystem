@@ -78,8 +78,17 @@ function LevelSystem.ApplySkillEffects(ply)
 
 	local healthPoints = skills.health or 0
 	local maxHealth = BASE_MAX_HEALTH + (healthPoints * Config.skills.health.perPoint)
+	local oldMaxHealth = ply:GetMaxHealth()
 	ply:SetMaxHealth(maxHealth)
-	if ply:Health() > maxHealth then
+
+	if maxHealth > oldMaxHealth then
+		-- Investing a point should actually heal you by the gain, not just
+		-- raise an invisible ceiling -- otherwise your current HP stays the
+		-- same while the cap goes up, so the health bar's fill % (and the
+		-- HUD bar built on top of it) visibly shrinks even though nothing
+		-- was actually taken away.
+		ply:SetHealth(math.min(ply:Health() + (maxHealth - oldMaxHealth), maxHealth))
+	elseif ply:Health() > maxHealth then
 		ply:SetHealth(maxHealth)
 	end
 
