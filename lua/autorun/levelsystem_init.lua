@@ -31,4 +31,5 @@ include_server("levelsystem/sv_jobs.lua")
 include_server("levelsystem/sv_admin.lua")
 
 include_client("levelsystem/cl_data.lua")
+include_client("levelsystem/cl_public_data.lua")
 include_client("levelsystem/cl_skills_tab.lua")

@@ -15,6 +15,7 @@ util.AddNetworkString("levelsystem_spend")
 util.AddNetworkString("levelsystem_resetall")
 util.AddNetworkString("levelsystem_prestige")
 util.AddNetworkString("levelsystem_notify")
+util.AddNetworkString("levelsystem_public_data")
 
 local function emptySkills()
 	local skills = {}
@@ -83,22 +84,44 @@ function LevelSystem.GetData(ply)
 end
 
 --[[
-- Sends a player's current data to their own client.
+- Broadcasts a player's level/prestige to clients -- to everyone by
+- default, or just `target` when catching one client up on someone
+- they've already missed broadcasts for (see PlayerInitialSpawn below).
 -
-- Also mirrors level/prestige into stock networked entity vars
-- (SetNWInt), which the engine broadcasts to every client automatically --
-- unlike the "levelsystem_data" net message above (net.Send(ply), private
-- to the owner), so anything showing a player's level to OTHER clients
-- (e.g. the scoreboard) can just read player:GetNWInt(...) directly
-- without its own custom networking.
+- Deliberately a real net broadcast rather than SetNWInt: NWVars are only
+- guaranteed to reach clients for whom the entity is currently PVS-
+- relevant (roughly: visible/nearby), which silently breaks exactly this
+- use case -- a scoreboard needs to show every player's level regardless
+- of whether you can currently see them in the world.
+-
+- @param player ply
+- @param player|nil target
+]]
+local function broadcastPublicData(ply, target)
+	local data = LevelSystem.GetData(ply)
+
+	net.Start("levelsystem_public_data")
+		net.WriteEntity(ply)
+		net.WriteUInt(data.level, 8)
+		net.WriteUInt(data.prestige, 8)
+	if target then
+		net.Send(target)
+	else
+		net.Broadcast()
+	end
+end
+
+--[[
+- Sends a player's current full data (level, xp, skills, etc) to their
+- own client, and their level/prestige to everyone (see
+- broadcastPublicData above).
 -
 - @param player ply
 ]]
 function LevelSystem.SyncToClient(ply)
 	local data = LevelSystem.GetData(ply)
 
-	ply:SetNWInt("LevelSystemLevel", data.level)
-	ply:SetNWInt("LevelSystemPrestige", data.prestige)
+	broadcastPublicData(ply)
 
 	net.Start("levelsystem_data")
 		net.WriteUInt(data.level, 8)
@@ -116,8 +139,17 @@ end
 hook.Add("PlayerInitialSpawn", "levelsystem_load", function(ply)
 	LevelSystem.LoadData(ply)
 	timer.Simple(1, function()
-		if IsValid(ply) then
-			LevelSystem.SyncToClient(ply)
+		if not IsValid(ply) then return end
+
+		LevelSystem.SyncToClient(ply)
+
+		-- Catches the new player up on everyone else's level/prestige --
+		-- they've missed every broadcastPublicData call that happened
+		-- before they connected.
+		for _, other in ipairs(player.GetAll()) do
+			if other ~= ply and LevelSystem.PlayerData[other:SteamID64()] then
+				broadcastPublicData(other, ply)
+			end
 		end
 	end)
 end)
