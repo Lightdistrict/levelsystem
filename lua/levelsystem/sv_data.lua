@@ -84,10 +84,21 @@ end
 
 --[[
 - Sends a player's current data to their own client.
+-
+- Also mirrors level/prestige into stock networked entity vars
+- (SetNWInt), which the engine broadcasts to every client automatically --
+- unlike the "levelsystem_data" net message above (net.Send(ply), private
+- to the owner), so anything showing a player's level to OTHER clients
+- (e.g. the scoreboard) can just read player:GetNWInt(...) directly
+- without its own custom networking.
+-
 - @param player ply
 ]]
 function LevelSystem.SyncToClient(ply)
 	local data = LevelSystem.GetData(ply)
+
+	ply:SetNWInt("LevelSystemLevel", data.level)
+	ply:SetNWInt("LevelSystemPrestige", data.prestige)
 
 	net.Start("levelsystem_data")
 		net.WriteUInt(data.level, 8)
